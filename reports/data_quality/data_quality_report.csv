@@ -1,0 +1,17 @@
+dataset,column,dtype,total_records,placeholder_count,null_count,missing_pct,min,max,mean,std,out_of_bounds_count,is_constant
+weather,YEAR,int64,17520,0,0,0.0,2022.0,2023.0,2022.5,0.5,0,False
+weather,MO,int64,17520,0,0,0.0,1.0,12.0,6.526,3.4479,0,False
+weather,DY,int64,17520,0,0,0.0,1.0,31.0,15.7205,8.7965,0,False
+weather,HR,int64,17520,0,0,0.0,0.0,23.0,11.5,6.9224,0,False
+weather,ALLSKY_SFC_SW_DWN,float64,17520,2,0,0.01,0.0,1.0763,0.2024,0.269,0,False
+weather,T2M,float64,17520,4,0,0.02,-4.06,33.59,15.006,8.0522,0,False
+weather,RH2M,float64,17520,2,0,0.01,26.6,100.0,75.2757,16.412,0,False
+weather,PS,float64,17520,4,0,0.02,98.56,103.82,101.3105,0.9392,0,False
+weather,WS10M,float64,17520,3,0,0.02,0.1,14.91,3.9908,2.0919,0,False
+weather,WD10M,float64,17520,0,0,0.0,0.0,359.98,180.452,104.1313,0,False
+weather,WS50M,float64,17520,0,0,0.0,0.1,19.02,5.0,2.6372,0,False
+weather,WD50M,float64,17520,0,0,0.0,0.02,360.0,180.6335,104.1493,0,False
+weather,RHOA,float64,17520,0,0,0.0,1.1327,1.3199,1.2257,0.0364,0,False
+weather,QV10M,float64,17520,0,0,0.0,0.5,1.65,0.8019,0.2299,0,False
+weather,CLOUD_AMT,float64,17520,0,0,0.0,0.0,95.93,28.6362,17.1904,0,False
+energy,energy_output_kwh,float64,17520,0,0,0.0,0.0,524.612,96.8973,128.6865,0,False

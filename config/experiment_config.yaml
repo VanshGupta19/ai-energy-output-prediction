@@ -1,0 +1,38 @@
+# config/experiment_config.yaml
+# Experiment definitions: Walk-Forward, Multi-Horizon, Ablation, Multi-Site, SHAP
+
+multi_horizon:
+  horizons: [1, 3, 6, 12, 24]
+  evaluation_metric: "rmse"
+
+walk_forward:
+  mode: "fast" # "fast" (fewer folds/epochs) or "full" (all folds, full epochs)
+  fast_config:
+    n_splits: 3
+    test_size_hours: 720 # 30 days per fold
+    min_train_size_hours: 2160 # 90 days initial training
+    epochs: 15
+  full_config:
+    n_splits: 5
+    test_size_hours: 1440 # 60 days per fold
+    min_train_size_hours: 4320 # 180 days initial training
+    epochs: 60
+
+ablation:
+  components:
+    - name: "MLP_only"
+      description: "Dense MLP without sequential LSTM encoder"
+    - name: "LSTM_only"
+      description: "Standalone LSTM without MLP feature encoder"
+    - name: "MLP_LSTM"
+      description: "Hybrid MLP-LSTM without residual boosting"
+    - name: "MLP_LSTM_Residual_Boosting"
+      description: "Complete proposed hybrid model (MLP + LSTM + Residual Boosting)"
+
+shap:
+  sample_size_background: 200
+  sample_size_explain: 500
+  generate_force_plots: true
+  generate_summary_plots: true
+  generate_bar_plots: true
+  top_n_features: 15

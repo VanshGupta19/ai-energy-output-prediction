@@ -1,0 +1,5 @@
+Line  305: [→]     st.markdown('<div class="page-subtitle">Hybrid Architecture: <b>MLP → LSTM → Gradient Boosting Residual Correction</
+Line  395: [→]         geocode_btn = st.button("Resolve City → Coordinates", use_container_width=True)
+Line  415: [→]             st.success(f"Location found: **{display}** → Lat: `{lat_v:.4f}`, Lon: `{lon_v:.4f}`")
+Line  686: [📊]     tab1, tab2, tab3 = st.tabs(["📊 Baseline Models Benchmark", "🧩 Architectural Ablation Study", "🔄 Walk-Forward Validat
+Line  778: [🔍]     tab_d1, tab_d2, tab_d3 = st.tabs(["🔍 Quality Audit Report", "✂️ Chronological Splits", "🧬 Engineered Features Catalo

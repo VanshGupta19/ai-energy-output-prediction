@@ -1,0 +1,65 @@
+# config/config.yaml
+# Global Configuration for AI-Based Energy Output Prediction
+
+project:
+  name: "ai_energy_output_forecasting"
+  version: "1.0.0"
+  random_seed: 42
+
+data:
+  # Primary dataset paths
+  weather_path: "data/raw/weather/nasa_power_weather.csv"
+  energy_path: "data/raw/energy/solar_energy_generation.csv"
+  merged_output_path: "data/interim/merged_weather_energy.csv"
+  processed_output_dir: "data/processed"
+  
+  # Multi-site paths
+  site_paths:
+    site_1:
+      weather: "data/raw/site_1/weather.csv"
+      energy: "data/raw/site_1/energy.csv"
+    site_2:
+      weather: "data/raw/site_2/weather.csv"
+      energy: "data/raw/site_2/energy.csv"
+      
+  # Target definition
+  target_column: "energy_output_kwh"
+  target_unit: "kWh"
+  allow_synthetic_demo: false # Strict production requirement: real energy target required by default
+
+target:
+  default_horizon_hours: 24
+  horizons_hours: [1, 3, 6, 12, 24]
+
+split:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+
+preprocessing:
+  missing_value_placeholder: -999.0
+  interpolation_method: "time" # or "linear"
+  max_consecutive_missing: 6
+  outlier_method: "iqr" # "iqr" or "zscore"
+  outlier_threshold: 3.0 # IQR multiplier or Z-score threshold
+  scaler_type: "minmax" # "minmax", "standard", or "robust"
+  feature_range: [0.0, 1.0]
+
+features:
+  energy_lags: [1, 24, 168] # t-1, t-24, t-168 hours
+  weather_lags: [1, 24]
+  rolling_windows: [6, 24] # 6-hour and 24-hour historical windows
+  rolling_stats: ["mean", "std"]
+  cyclical_features: ["hour", "dayofyear"]
+  time_features: ["hour", "dayofweek", "dayofmonth", "month", "dayofyear", "is_weekend"]
+  domain_features:
+    enable_solar_features: true
+    enable_wind_features: true
+
+paths:
+  models_dir: "models"
+  results_dir: "results"
+  reports_dir: "reports"
+  figures_dir: "reports/figures"
+  metrics_dir: "reports/metrics"
+  data_quality_dir: "reports/data_quality"

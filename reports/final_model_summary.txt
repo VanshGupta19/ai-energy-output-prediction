@@ -1,0 +1,53 @@
+================================================================================
+FINAL RESEARCH SUMMARY REPORT
+AI-Based Prediction of Future Energy Output Using Weather and Historical Data
+================================================================================
+Total Execution Time: 582.96 seconds
+Execution Mode: FULL
+Target Variable: energy_output_kwh (kWh)
+Architecture: MLP -> LSTM -> Gradient Boosting Residual Correction + Conformal PICP
+
+1. DATA QUALITY & PROFILE
+--------------------------------------------------------------------------------
+- Weather Rows: 17520, Energy Rows: 17520
+- Missing Placeholders (-999) Cleaned: 15
+- Leakage Prevention: Verified (Historical rolling shift=1, Train-only scaler fit)
+
+2. HYBRID MODEL FORECASTING PERFORMANCE (Horizon = 24 Hours)
+--------------------------------------------------------------------------------
+- Base Model (MLP-LSTM):               RMSE = 16.7877, MAE = 11.2823, MAPE = 21.98%, R2 = 0.9650
+- Proposed (MLP-LSTM + Boosting):      RMSE = 15.6553, MAE = 8.3296, MAPE = 17.15%, R2 = 0.9696
+- Absolute RMSE Gain:                 1.1324 kWh
+- Percentage RMSE Improvement:        6.75%
+
+3. UNCERTAINTY QUANTIFICATION (Conformal Prediction Intervals)
+--------------------------------------------------------------------------------
+- Target Confidence Level:            90.0%
+- Empirical Coverage (PICP):          97.09%
+- Mean Interval Width (MPIW):         63.6174 kWh
+
+4. BENCHMARK COMPARISONS (24h Ahead)
+--------------------------------------------------------------------------------
+                                  model  horizon_hours      MAE        MSE     RMSE   MAPE      R2
+                   Seasonal Naive (24h)             24 117.4033 18755.3856 136.9503 100.00 -1.3287
+        Support Vector Regression (SVR)             24  21.0627   840.7846  28.9963  86.96  0.8956
+                        Standalone LSTM             24   8.8565   248.4089  15.7610  16.97  0.9692
+                   Temporal Transformer             24  10.0116   253.7704  15.9302  18.48  0.9685
+                 MLP-LSTM (Base Hybrid)             24  11.2823   281.8282  16.7877  21.98  0.9650
+MLP-LSTM + Residual Boosting (Proposed)             24   8.3296   245.0880  15.6553  17.15  0.9696
+
+5. TOP 5 SHAP FEATURE CONTRIBUTIONS TO RESIDUAL CORRECTION
+--------------------------------------------------------------------------------
+                 feature  mean_abs_shap
+base_mlp_lstm_prediction       0.001441
+               dayofyear       0.001247
+                      DY       0.001235
+ energy_output_kwh_lag_1       0.000853
+                hour_sin       0.000786
+
+6. ARTIFACTS AND DELIVERABLES GENERATED
+--------------------------------------------------------------------------------
+- CSV Metrics: reports/metrics/*.csv (9 metric summary tables)
+- Visualizations: reports/figures/*.png (14 publication figures)
+- Models: models/*.pt, models/*.pkl (Fitted weights & preprocessors)
+================================================================================

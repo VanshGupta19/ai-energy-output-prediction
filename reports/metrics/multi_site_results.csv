@@ -1,0 +1,2 @@
+training_site,testing_site,transfer_mode,MAE,MSE,RMSE,MAPE,R2
+Site_1 (400kW PV),Site_2 (600kW PV Held-out),Zero-shot Direct Transfer,33.8145,3586.8919,59.8907,42.04,0.8485

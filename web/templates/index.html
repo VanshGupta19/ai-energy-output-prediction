@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Energy Forecasting — Research Dashboard</title>
+<meta name="description" content="Hybrid MLP-LSTM + XGBoost residual solar energy forecasting with NASA POWER and conformal prediction intervals.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f9fafb;--surface:#fff;--border:#e5e7eb;--border-dk:#d1d5db;
+  --accent:#1d4ed8;--accent-lt:#eff6ff;
+  --text:#111827;--text-2:#374151;--text-3:#6b7280;--text-4:#9ca3af;
+  --green:#059669;--red:#dc2626;--amber:#d97706;
+  --r:6px;--sh:0 1px 3px rgba(0,0,0,.07)
+}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+
+/* Header */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;position:sticky;top:0;z-index:100}
+.hdr-inner{max-width:1280px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px}
+.hdr-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.hdr-sub{font-size:12px;color:var(--text-3);margin-top:1px}
+.hdr-badge{font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-lt);border:1px solid #bfdbfe;padding:2px 8px;border-radius:4px;margin-left:8px}
+.hdr-right{display:flex;align-items:center;gap:1.5rem}
+.hdr-stat{font-size:11px;color:var(--text-3)}
+.hdr-stat b{color:var(--text-2)}
+.btn-docs{font-size:12px;font-weight:500;color:var(--text-2);text-decoration:none;border:1px solid var(--border);padding:5px 12px;border-radius:var(--r);transition:border-color .15s}
+.btn-docs:hover{border-color:var(--border-dk)}
+
+/* Tab nav */
+.nav{background:var(--surface);border-bottom:1px solid var(--border)}
+.nav-inner{max-width:1280px;margin:0 auto;padding:0 2rem;display:flex;gap:0}
+.tab-btn{padding:10px 16px;font-size:13px;font-weight:500;color:var(--text-3);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .15s;white-space:nowrap}
+.tab-btn:hover{color:var(--text-2)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+
+/* Layout */
+.page{max-width:1280px;margin:0 auto;padding:2rem}
+.tab-content{display:none}
+.tab-content.active{display:block}
+.page-h{font-size:20px;font-weight:700;color:var(--text);letter-spacing:-.4px;margin-bottom:4px}
+.page-d{font-size:13px;color:var(--text-3);margin-bottom:1.5rem}
+
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem 1.5rem;box-shadow:var(--sh)}
+.card+.card{margin-top:1rem}
+.card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:1rem}
+
+/* Grids */
+.kpi-grid{display:grid;gap:1rem;margin-bottom:1.5rem}
+.grid-5{grid-template-columns:repeat(5,1fr)}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:900px){.grid-5,.grid-4{grid-template-columns:repeat(2,1fr)}.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* KPI card */
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem}
+.kpi-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin-bottom:6px}
+.kpi-val{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.5px}
+.kpi-sub{font-size:12px;color:var(--text-3);margin-top:3px}
+.kpi-sub.pos{color:var(--green)}
+
+/* Form */
+label{display:block;font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:5px}
+input[type=text],input[type=number],input[type=date],select{
+  width:100%;padding:8px 10px;font-size:13px;font-family:inherit;color:var(--text);
+  background:var(--surface);border:1px solid var(--border-dk);border-radius:var(--r);outline:none;transition:border-color .15s,box-shadow .15s
+}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;font-size:13px;font-weight:600;font-family:inherit;border-radius:var(--r);cursor:pointer;transition:all .15s;border:1px solid transparent}
+.btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-p:hover{background:#1e40af;border-color:#1e40af}
+.btn-p:disabled{opacity:.6;cursor:not-allowed}
+.btn-s{background:var(--surface);color:var(--text-2);border-color:var(--border-dk)}
+.btn-s:hover{border-color:#9ca3af}
+
+/* Alerts */
+.alert{padding:10px 14px;border-radius:var(--r);font-size:13px;margin-bottom:1rem;display:none}
+.alert.show{display:block}
+.al-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+.al-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
+.al-err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+.al-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--text-3);background:var(--bg);border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f9fafb}
+.num{font-variant-numeric:tabular-nums}
+.best{font-weight:700;color:var(--green)}
+
+/* Steps */
+.step{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-4);margin-bottom:8px;margin-top:1rem}
+hr{border:none;border-top:1px solid var(--border);margin:1.25rem 0}
+
+/* Result */
+.res{display:none}
+.res.show{display:block}
+
+/* Weather cards */
+.wx-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem;margin-bottom:1.25rem}
+@media(max-width:900px){.wx-row{grid-template-columns:repeat(3,1fr)}}
+.wx{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.9rem 1rem}
+.wx-lbl{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.wx-val{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.wx-unit{font-size:11px;color:var(--text-4);margin-top:2px}
+
+/* Chart wrap */
+.chart-box{border:1px solid var(--border);border-radius:var(--r);background:var(--surface);padding:1rem;margin-bottom:1rem}
+.chart-ttl{font-size:13px;font-weight:600;color:var(--text);margin-bottom:.75rem}
+
+/* Check list */
+.chk{list-style:none}
+.chk li{font-size:13px;color:var(--text-2);padding:6px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.chk li:last-child{border:none}
+.dot-ok{width:16px;height:16px;background:var(--green);border-radius:50%;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center}
+.dot-ok::after{content:'';width:4px;height:7px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg) translate(-1px,-1px)}
+
+/* Spinner */
+.spin{width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:var(--accent);border-radius:50%;animation:rot .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:4px}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* Expander */
+details summary{font-size:12px;font-weight:600;color:var(--text-3);cursor:pointer;padding:4px 0;user-select:none}
+details summary:hover{color:var(--text-2)}
+details[open] summary{margin-bottom:.75rem}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-inner">
+    <div>
+      <div class="hdr-title">AI Energy Forecasting <span class="hdr-badge">MLP-LSTM + XGBoost Residual</span></div>
+      <div class="hdr-sub">Research Dashboard &mdash; Solar PV Generation with NASA POWER &amp; Conformal Prediction</div>
+    </div>
+    <div class="hdr-right">
+      <div class="hdr-stat">R&sup2; <b>0.9696</b></div>
+      <div class="hdr-stat">RMSE <b>15.65 kWh</b></div>
+      <div class="hdr-stat">PICP <b>97.09%</b></div>
+      <a href="/docs" target="_blank" class="btn-docs">API Docs</a>
+    </div>
+  </div>
+</header>
+
+<!-- TAB NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="tab-btn active" onclick="switchTab('overview')"  id="tab-overview">Overview</button>
+    <button class="tab-btn"        onclick="switchTab('forecast')"  id="tab-forecast">Location Forecast</button>
+    <button class="tab-btn"        onclick="switchTab('timeseries')"id="tab-timeseries">Time-Series</button>
+    <button class="tab-btn"        onclick="switchTab('benchmarks')"id="tab-benchmarks">Benchmarks</button>
+    <button class="tab-btn"        onclick="switchTab('features')"  id="tab-features">Feature Importance</button>
+  </div>
+</nav>
+
+<main class="page">
+
+<!-- ═══════ OVERVIEW ═══════ -->
+<section id="content-overview" class="tab-content active">
+  <div class="page-h">Executive Overview</div>
+  <div class="page-d">Hybrid neural + boosting pipeline for solar energy generation forecasting using real NASA weather data.</div>
+
+  <div class="kpi-grid grid-5">
+    <div class="kpi"><div class="kpi-lbl">Test RMSE</div><div class="kpi-val">15.65</div><div class="kpi-sub pos">&minus;1.13 kWh vs Base</div></div>
+    <div class="kpi"><div class="kpi-lbl">Test MAE</div><div class="kpi-val">8.33</div><div class="kpi-sub pos">&minus;2.95 kWh vs Base</div></div>
+    <div class="kpi"><div class="kpi-lbl">R&sup2; Score</div><div class="kpi-val">0.9696</div><div class="kpi-sub pos">+0.0046 vs Base</div></div>
+    <div class="kpi"><div class="kpi-lbl">Conformal PICP</div><div class="kpi-val">97.09%</div><div class="kpi-sub">Target: 90%</div></div>
+    <div class="kpi"><div class="kpi-lbl">Interval Width</div><div class="kpi-val">63.6 kWh</div><div class="kpi-sub">90% PI mean</div></div>
+  </div>
+
+  <div class="kpi-grid grid-2">
+    <div class="card">
+      <div class="card-title">Architecture Summary</div>
+      <table>
+        <tr><th>Component</th><th>Description</th></tr>
+        <tr><td><b>MLP Layer</b></td><td>Non-linear feature extraction per timestep from meteorological inputs</td></tr>
+        <tr><td><b>LSTM Layer</b></td><td>Temporal sequential dynamics across lookback window</td></tr>
+        <tr><td><b>XGBoost Residual</b></td><td>Second-stage correction of systematic MLP-LSTM errors</td></tr>
+        <tr><td><b>Conformal PI</b></td><td>Distribution-free 90% calibrated prediction intervals</td></tr>
+      </table>
+      <div class="chart-box" style="margin-top:1.25rem;border:none;padding:0;">
+        <div class="chart-ttl">RMSE vs Forecast Horizon</div>
+        <div id="chart-horizons" style="height:240px;"></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1rem;">
+      <div class="card">
+        <div class="card-title">Baseline Benchmark &mdash; 24h Ahead</div>
+        <div style="overflow-x:auto;">
+          <table id="tbl-ov-bench">
+            <thead><tr><th>Model</th><th>RMSE</th><th>MAE</th><th>R&sup2;</th></tr></thead>
+            <tbody><tr><td colspan="4" style="color:var(--text-4);text-align:center;">Loading&hellip;</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Scientific Constraints</div>
+        <ul class="chk">
+          <li><span class="dot-ok"></span>No CNN &mdash; strictly tabular / time-series architecture</li>
+          <li><span class="dot-ok"></span>Zero data leakage &mdash; scalers fitted on training split only</li>
+          <li><span class="dot-ok"></span>Chronological splits &mdash; no shuffling across folds</li>
+          <li><span class="dot-ok"></span>Pytest suite &mdash; 20/20 test cases passed</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ LOCATION FORECAST ═══════ -->
+<section id="content-forecast" class="tab-content">
+  <div class="page-h">Location &amp; Date Energy Forecast</div>
+  <div class="page-d">Enter a location and date. Weather (irradiance, temperature, wind, humidity, cloud) is fetched automatically from <strong>NASA POWER</strong> and passed through the hybrid model to generate hourly predictions.</div>
+
+  <div class="card">
+    <div class="step">Step 1 &mdash; Location</div>
+    <div class="kpi-grid grid-3" style="margin-bottom:.75rem;">
+      <div>
+        <label for="i-city">City / Place Name</label>
+        <input type="text" id="i-city" value="New Delhi" placeholder="e.g. Mumbai, Cairo, Phoenix">
+      </div>
+      <div>
+        <label for="i-lat">Latitude (decimal degrees)</label>
+        <input type="number" id="i-lat" value="28.6139" step="0.0001" min="-90" max="90">
+      </div>
+      <div>
+        <label for="i-lon">Longitude (decimal degrees)</label>
+        <input type="number" id="i-lon" value="77.2090" step="0.0001" min="-180" max="180">
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+      <button class="btn btn-s" onclick="doGeocode()" id="btn-geo">Resolve City to Coordinates</button>
+      <span id="geo-msg" style="font-size:12px;color:var(--text-3);"></span>
+    </div>
+
+    <hr>
+
+    <div class="step" style="margin-top:.5rem;">Step 2 &mdash; Date &amp; Run</div>
+    <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+      <div style="flex:0 0 220px;">
+        <label for="i-date">Forecast Date <span style="font-weight:400;color:var(--text-4);">(3+ days ago for NASA data)</span></label>
+        <input type="date" id="i-date">
+      </div>
+      <div style="flex:0 0 190px;">
+        <label for="i-hz">Forecast Horizon</label>
+        <select id="i-hz">
+          <option value="24" selected>24 Hours Ahead</option>
+          <option value="12">12 Hours Ahead</option>
+          <option value="6">6 Hours Ahead</option>
+        </select>
+      </div>
+      <div>
+        <button class="btn btn-p" onclick="doForecast()" id="btn-run">Fetch Weather &amp; Predict Energy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="alert" id="fc-alert"></div>
+
+  <div class="res" id="fc-res">
+
+    <div class="step">Fetched Weather &mdash; NASA POWER</div>
+    <div class="wx-row">
+      <div class="wx"><div class="wx-lbl">Peak Irradiance</div><div class="wx-val" id="wx-irr">&mdash;</div><div class="wx-unit">kW/m&sup2;</div></div>
+      <div class="wx"><div class="wx-lbl">Avg Temperature</div><div class="wx-val" id="wx-tmp">&mdash;</div><div class="wx-unit">&deg;C</div></div>
+      <div class="wx"><div class="wx-lbl">Avg Humidity</div><div class="wx-val" id="wx-hum">&mdash;</div><div class="wx-unit">% relative</div></div>
+      <div class="wx"><div class="wx-lbl">Avg Wind Speed</div><div class="wx-val" id="wx-wnd">&mdash;</div><div class="wx-unit">m/s at 50m</div></div>
+      <div class="wx"><div class="wx-lbl">Avg Cloud Cover</div><div class="wx-val" id="wx-cld">&mdash;</div><div class="wx-unit">%</div></div>
+    </div>
+
+    <div class="step">Predicted Energy Output</div>
+    <div class="kpi-grid grid-4" style="margin-bottom:1.25rem;">
+      <div class="kpi"><div class="kpi-lbl">Total Day Energy</div><div class="kpi-val" id="k-tot">&mdash;</div><div class="kpi-sub">kWh (0&ndash;23h)</div></div>
+      <div class="kpi"><div class="kpi-lbl">Daytime Energy</div><div class="kpi-val" id="k-day">&mdash;</div><div class="kpi-sub">kWh (06&ndash;18h)</div></div>
+      <div class="kpi"><div class="kpi-lbl">Peak Hour Output</div><div class="kpi-val" id="k-pk">&mdash;</div><div class="kpi-sub" id="k-pk-hr">kWh</div></div>
+      <div class="kpi"><div class="kpi-lbl">90% Interval Width</div><div class="kpi-val">&plusmn;43.5</div><div class="kpi-sub">kWh (conformal)</div></div>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-ttl">Hourly Energy Forecast with 90% Conformal Prediction Interval</div>
+      <div id="chart-fc" style="height:320px;"></div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-ttl">Fetched Weather Conditions: Irradiance &amp; Temperature</div>
+      <div id="chart-wx" style="height:240px;"></div>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary>View Full 24-Hour Prediction Table</summary>
+        <div style="overflow-x:auto;margin-top:.5rem;">
+          <table>
+            <thead>
+              <tr>
+                <th>Hour</th><th>Irr. (kW/m&sup2;)</th><th>Temp (&deg;C)</th><th>Cloud (%)</th><th>Hum (%)</th><th>Wind (m/s)</th>
+                <th>Base MLP-LSTM</th><th>Residual Adj.</th><th>Final Hybrid</th><th>Lower 90%</th><th>Upper 90%</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-hr-body"></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ TIME-SERIES ═══════ -->
+<section id="content-timeseries" class="tab-content">
+  <div class="page-h">Time-Series Forecast Explorer</div>
+  <div class="page-d">Actual vs. predicted energy over the held-out test set with 90% conformal prediction bounds.</div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <div class="card-title" style="margin:0;">Continuous Test-Set Forecast</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label for="ts-rng" style="margin:0;">Display:</label>
+        <select id="ts-rng" style="width:auto;" onchange="loadTS()">
+          <option value="168">First 7 Days</option>
+          <option value="336" selected>First 14 Days</option>
+          <option value="720">Full Month</option>
+        </select>
+      </div>
+    </div>
+    <div id="chart-ts" style="height:420px;"></div>
+  </div>
+</section>
+
+<!-- ═══════ BENCHMARKS ═══════ -->
+<section id="content-benchmarks" class="tab-content">
+  <div class="page-h">Benchmarks &amp; Ablation</div>
+  <div class="page-d">Comparison against baselines and component-level ablation study.</div>
+  <div class="kpi-grid grid-2">
+    <div class="card">
+      <div class="card-title">Baseline Model Comparison &mdash; 24h Ahead</div>
+      <div style="overflow-x:auto;">
+        <table id="tbl-bsl">
+          <thead><tr><th>Model</th><th>RMSE</th><th>MAE</th><th>R&sup2;</th><th>MAPE</th></tr></thead>
+          <tbody><tr><td colspan="5" style="color:var(--text-4);text-align:center;">Loading&hellip;</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Ablation Study</div>
+      <div style="overflow-x:auto;">
+        <table id="tbl-abl">
+          <thead><tr><th>Variant</th><th>RMSE</th><th>MAE</th><th>R&sup2;</th></tr></thead>
+          <tbody><tr><td colspan="4" style="color:var(--text-4);text-align:center;">Loading&hellip;</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:1rem;">
+    <div class="card-title">RMSE vs Forecast Horizon</div>
+    <div id="chart-hz-bch" style="height:280px;"></div>
+  </div>
+</section>
+
+<!-- ═══════ FEATURES ═══════ -->
+<section id="content-features" class="tab-content">
+  <div class="page-h">Feature Importance</div>
+  <div class="page-d">SHAP-based attribution for the XGBoost residual correction model.</div>
+  <div class="kpi-grid grid-2">
+    <div class="card">
+      <div class="card-title">Top Features by Importance Score</div>
+      <div id="chart-shap" style="height:340px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Feature Importance Table</div>
+      <div style="overflow-x:auto;">
+        <table id="tbl-feat">
+          <thead><tr><th>Rank</th><th>Feature</th><th>Score</th></tr></thead>
+          <tbody><tr><td colspan="3" style="color:var(--text-4);text-align:center;">Loading&hellip;</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+// Chart defaults — clean, no decoration
+const CD = {
+  chart:  { fontFamily:"'Inter',sans-serif", toolbar:{show:false}, background:'#fff' },
+  grid:   { borderColor:'#f3f4f6', strokeDashArray:3 },
+  tooltip:{ theme:'light', style:{fontSize:'12px'} },
+  xaxis:  { labels:{style:{colors:'#6b7280',fontSize:'11px'}}, axisBorder:{show:false}, axisTicks:{show:false} },
+  yaxis:  { labels:{style:{colors:'#6b7280',fontSize:'11px'}} },
+  legend: { position:'top', fontSize:'12px', labels:{colors:'#374151'}, markers:{radius:2} },
+};
+
+function switchTab(t) {
+  document.querySelectorAll('.tab-content').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('content-'+t).classList.add('active');
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='timeseries') loadTS();
+  if(t==='benchmarks') { loadBsl(); loadAbl(); loadHzBch(); }
+  if(t==='features')   loadFeat();
+}
+
+async function api(path) {
+  try { const r=await fetch(path); return r.ok?await r.json():null; } catch{ return null; }
+}
+async function metric(type) { const d=await api('/api/metrics/'+type); return d||[]; }
+
+// ── Overview ─────────────────────────────────────────────
+async function initOverview() {
+  // Default date
+  const d=new Date(); d.setDate(d.getDate()-3);
+  document.getElementById('i-date').value=d.toISOString().split('T')[0];
+
+  // Horizon chart
+  const rows=await metric('horizons');
+  if(rows.length) {
+    const models=[...new Set(rows.map(r=>r.model))];
+    const hrs=[...new Set(rows.map(r=>r.horizon_hours))].sort((a,b)=>a-b);
+    new ApexCharts(document.getElementById('chart-horizons'),{
+      ...CD,
+      series: models.map(m=>({name:m,data:hrs.map(h=>{const r=rows.find(x=>x.model===m&&x.horizon_hours===h);return r?+r.RMSE:null})})),
+      colors:['#1d4ed8','#d97706','#059669','#9ca3af'],
+      chart:{...CD.chart,type:'line',height:240},
+      markers:{size:4}, stroke:{width:2,curve:'smooth'},
+      xaxis:{...CD.xaxis,categories:hrs,title:{text:'Forecast Horizon (hours)',style:{color:'#6b7280',fontSize:'11px'}}},
+      yaxis:{...CD.yaxis,title:{text:'RMSE [kWh]',style:{color:'#6b7280',fontSize:'11px'}}},
+    }).render();
+  }
+
+  // Overview bench table
+  const brows=await metric('baselines');
+  if(brows.length){
+    const sorted=[...brows].sort((a,b)=>a.RMSE-b.RMSE);
+    const mn=Math.min(...sorted.map(r=>+r.RMSE));
+    document.querySelector('#tbl-ov-bench tbody').innerHTML=sorted.map(r=>`
+      <tr><td><b>${r.model}</b></td>
+          <td class="num ${+r.RMSE===mn?'best':''}">${(+r.RMSE).toFixed(4)}</td>
+          <td class="num">${(+r.MAE).toFixed(4)}</td>
+          <td class="num">${(+r.R2).toFixed(4)}</td></tr>`).join('');
+  }
+}
+
+// ── Geocode ───────────────────────────────────────────────
+async function doGeocode(){
+  const city=document.getElementById('i-city').value.trim();
+  if(!city) return;
+  const btn=document.getElementById('btn-geo'), msg=document.getElementById('geo-msg');
+  btn.disabled=true; btn.textContent='Resolving\u2026'; msg.textContent='';
+  const d=await api('/api/geocode?city='+encodeURIComponent(city));
+  if(d&&d.latitude){
+    document.getElementById('i-lat').value=d.latitude.toFixed(4);
+    document.getElementById('i-lon').value=d.longitude.toFixed(4);
+    msg.style.color='var(--green)';
+    msg.textContent=d.display_name+' \u2192 '+d.latitude.toFixed(4)+', '+d.longitude.toFixed(4);
+  } else {
+    msg.style.color='var(--red)';
+    msg.textContent='Location not found. Enter coordinates manually.';
+  }
+  btn.disabled=false; btn.textContent='Resolve City to Coordinates';
+}
+
+// ── Forecast ──────────────────────────────────────────────
+let fcChart=null, wxChart=null;
+function showAl(msg,cls){
+  const el=document.getElementById('fc-alert');
+  el.textContent=msg; el.className='alert '+cls+' show';
+}
+
+async function doForecast(){
+  const lat=parseFloat(document.getElementById('i-lat').value);
+  const lon=parseFloat(document.getElementById('i-lon').value);
+  const date=document.getElementById('i-date').value;
+  const hz=parseInt(document.getElementById('i-hz').value);
+  if(!date){showAl('Please select a date.','al-warn');return;}
+  if(isNaN(lat)||isNaN(lon)){showAl('Enter valid coordinates.','al-warn');return;}
+
+  const btn=document.getElementById('btn-run');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spin"></span>Fetching NASA POWER data\u2026';
+  document.getElementById('fc-res').classList.remove('show');
+  showAl('Fetching hourly weather from NASA POWER and running model\u2026','al-info');
+
+  try {
+    const res=await fetch('/api/predict_from_location',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({latitude:lat,longitude:lon,date,horizon_hours:hz,capacity_kw:500})
+    });
+    if(!res.ok){const e=await res.json();showAl(e.detail||'Prediction failed.','al-err');btn.disabled=false;btn.textContent='Fetch Weather & Predict Energy';return;}
+
+    const data=await res.json();
+    const hrs=data.hourly_predictions, s=data.summary;
+    showAl('Prediction complete \u2014 '+date+' at ('+lat.toFixed(4)+', '+lon.toFixed(4)+')','al-ok');
+
+    // Weather
+    const peakI=Math.max(...hrs.map(h=>h.weather.irradiance_kw_m2));
+    const avgT=(hrs.reduce((a,h)=>a+h.weather.temperature_c,0)/24).toFixed(1);
+    const avgH=(hrs.reduce((a,h)=>a+h.weather.humidity_pct,0)/24).toFixed(1);
+    const avgW=(hrs.reduce((a,h)=>a+h.weather.wind_speed_50m_ms,0)/24).toFixed(2);
+    const avgC=(hrs.reduce((a,h)=>a+h.weather.cloud_pct,0)/24).toFixed(1);
+    document.getElementById('wx-irr').textContent=peakI.toFixed(3);
+    document.getElementById('wx-tmp').textContent=avgT;
+    document.getElementById('wx-hum').textContent=avgH;
+    document.getElementById('wx-wnd').textContent=avgW;
+    document.getElementById('wx-cld').textContent=avgC;
+
+    // KPIs
+    document.getElementById('k-tot').textContent=s.total_day_energy_kwh.toFixed(1);
+    document.getElementById('k-day').textContent=s.daytime_energy_kwh.toFixed(1);
+    document.getElementById('k-pk').textContent=s.peak_energy_kwh.toFixed(1);
+    document.getElementById('k-pk-hr').textContent='kWh \u2014 peak at '+s.peak_hour;
+
+    // Table
+    document.getElementById('tbl-hr-body').innerHTML=hrs.map(h=>`
+      <tr>
+        <td>${h.hour_label}</td>
+        <td class="num">${h.weather.irradiance_kw_m2.toFixed(4)}</td>
+        <td class="num">${h.weather.temperature_c.toFixed(1)}</td>
+        <td class="num">${h.weather.cloud_pct.toFixed(1)}</td>
+        <td class="num">${h.weather.humidity_pct.toFixed(1)}</td>
+        <td class="num">${h.weather.wind_speed_50m_ms.toFixed(2)}</td>
+        <td class="num">${h.base_mlp_lstm_prediction_kwh.toFixed(2)}</td>
+        <td class="num">${h.residual_boost_correction_kwh.toFixed(2)}</td>
+        <td class="num"><b>${h.final_hybrid_prediction_kwh.toFixed(2)}</b></td>
+        <td class="num">${h.conformal_interval_90.lower_kwh.toFixed(2)}</td>
+        <td class="num">${h.conformal_interval_90.upper_kwh.toFixed(2)}</td>
+      </tr>`).join('');
+
+    const lbl=hrs.map(h=>h.hour_label);
+    if(fcChart) fcChart.destroy();
+    fcChart=new ApexCharts(document.getElementById('chart-fc'),{
+      ...CD,
+      series:[
+        {name:'Final Hybrid',data:hrs.map(h=>+h.final_hybrid_prediction_kwh.toFixed(2))},
+        {name:'Base MLP-LSTM',data:hrs.map(h=>+h.base_mlp_lstm_prediction_kwh.toFixed(2))},
+        {name:'Upper 90%',data:hrs.map(h=>+h.conformal_interval_90.upper_kwh.toFixed(2))},
+        {name:'Lower 90%',data:hrs.map(h=>+h.conformal_interval_90.lower_kwh.toFixed(2))},
+      ],
+      colors:['#1d4ed8','#d97706','#d1d5db','#d1d5db'],
+      stroke:{width:[2.5,1.5,1,1],dashArray:[0,5,3,3],curve:'smooth'},
+      chart:{...CD.chart,type:'line',height:320},
+      xaxis:{...CD.xaxis,categories:lbl,title:{text:'Hour of Day',style:{color:'#6b7280',fontSize:'11px'}}},
+      yaxis:{...CD.yaxis,min:0,title:{text:'Energy [kWh]',style:{color:'#6b7280',fontSize:'11px'}}},
+      tooltip:{shared:true,intersect:false},
+    }); fcChart.render();
+
+    if(wxChart) wxChart.destroy();
+    wxChart=new ApexCharts(document.getElementById('chart-wx'),{
+      ...CD,
+      series:[
+        {name:'Irradiance (kW/m\u00b2)',type:'bar', data:hrs.map(h=>+h.weather.irradiance_kw_m2.toFixed(4))},
+        {name:'Temperature (\u00b0C)', type:'line',data:hrs.map(h=>+h.weather.temperature_c.toFixed(1))},
+      ],
+      colors:['#d97706','#dc2626'],
+      chart:{...CD.chart,height:240},
+      stroke:{width:[0,2]},
+      plotOptions:{bar:{columnWidth:'70%',borderRadius:2}},
+      xaxis:{...CD.xaxis,categories:lbl},
+      yaxis:[
+        {title:{text:'Irradiance [kW/m\u00b2]',style:{color:'#d97706',fontSize:'11px'}},labels:{style:{colors:'#6b7280',fontSize:'11px'}}},
+        {opposite:true,title:{text:'Temperature [\u00b0C]',style:{color:'#dc2626',fontSize:'11px'}},labels:{style:{colors:'#6b7280',fontSize:'11px'}}}
+      ],
+      tooltip:{shared:true},
+    }); wxChart.render();
+
+    document.getElementById('fc-res').classList.add('show');
+  } catch(e){ showAl('Request failed: '+e.message,'al-err'); }
+  btn.disabled=false; btn.textContent='Fetch Weather & Predict Energy';
+}
+
+// ── Time-series ───────────────────────────────────────────
+let tsChart=null;
+async function loadTS(){
+  const lim=document.getElementById('ts-rng').value;
+  const d=await api('/api/timeseries/24?limit='+lim);
+  if(!d||!d.timestamps||!d.actual_energy||!d.actual_energy.length) return;
+  if(tsChart) tsChart.destroy();
+  tsChart=new ApexCharts(document.getElementById('chart-ts'),{
+    ...CD,
+    series:[
+      {name:'Actual',        data:d.actual_energy.map((v,i)=>[i,+v.toFixed(1)])},
+      {name:'Hybrid Forecast',data:d.final_prediction.map((v,i)=>[i,+v.toFixed(1)])},
+      {name:'Upper 90%',     data:d.interval_upper.map((v,i)=>[i,+v.toFixed(1)])},
+      {name:'Lower 90%',     data:d.interval_lower.map((v,i)=>[i,+v.toFixed(1)])},
+    ],
+    colors:['#111827','#1d4ed8','#d1d5db','#d1d5db'],
+    stroke:{width:[2,2,1,1],dashArray:[0,0,4,4],curve:'smooth'},
+    chart:{...CD.chart,type:'line',height:420,zoom:{enabled:true}},
+    xaxis:{...CD.xaxis,type:'numeric',title:{text:'Hour Index',style:{color:'#6b7280',fontSize:'11px'}}},
+    yaxis:{...CD.yaxis,title:{text:'Energy [kWh]',style:{color:'#6b7280',fontSize:'11px'}}},
+  }); tsChart.render();
+}
+
+// ── Benchmarks ────────────────────────────────────────────
+async function loadBsl(){
+  const rows=await metric('baselines');
+  if(!rows.length) return;
+  const s=[...rows].sort((a,b)=>a.RMSE-b.RMSE);
+  const mn=Math.min(...s.map(r=>+r.RMSE));
+  document.querySelector('#tbl-bsl tbody').innerHTML=s.map(r=>`
+    <tr><td><b>${r.model}</b></td>
+        <td class="num ${+r.RMSE===mn?'best':''}">${(+r.RMSE).toFixed(4)}</td>
+        <td class="num">${(+r.MAE).toFixed(4)}</td>
+        <td class="num">${(+r.R2).toFixed(4)}</td>
+        <td class="num">${(+r.MAPE).toFixed(2)}%</td></tr>`).join('');
+}
+async function loadAbl(){
+  const rows=await metric('ablation');
+  if(!rows.length) return;
+  document.querySelector('#tbl-abl tbody').innerHTML=rows.map(r=>`
+    <tr><td>${r.variant||r.model||r.ablation_variant||Object.values(r)[0]}</td>
+        <td class="num">${(+r.RMSE).toFixed(4)}</td>
+        <td class="num">${(+r.MAE).toFixed(4)}</td>
+        <td class="num">${(+r.R2).toFixed(4)}</td></tr>`).join('');
+}
+async function loadHzBch(){
+  const rows=await metric('horizons');
+  if(!rows.length) return;
+  const models=[...new Set(rows.map(r=>r.model))];
+  const hrs=[...new Set(rows.map(r=>r.horizon_hours))].sort((a,b)=>a-b);
+  new ApexCharts(document.getElementById('chart-hz-bch'),{
+    ...CD,
+    series:models.map(m=>({name:m,data:hrs.map(h=>{const r=rows.find(x=>x.model===m&&x.horizon_hours===h);return r?+r.RMSE:null})})),
+    colors:['#1d4ed8','#d97706','#059669','#9ca3af'],
+    chart:{...CD.chart,type:'line',height:280},
+    markers:{size:5}, stroke:{width:2},
+    xaxis:{...CD.xaxis,categories:hrs,title:{text:'Forecast Horizon (hours)',style:{color:'#6b7280',fontSize:'11px'}}},
+    yaxis:{...CD.yaxis,title:{text:'RMSE [kWh]',style:{color:'#6b7280',fontSize:'11px'}}},
+  }).render();
+}
+
+// ── Features ──────────────────────────────────────────────
+async function loadFeat(){
+  const rows=await metric('features');
+  if(!rows.length) return;
+  const key=rows[0]&&rows[0].mean_abs_shap!==undefined?'mean_abs_shap':'importance';
+  const s=[...rows].sort((a,b)=>(b[key]||0)-(a[key]||0)).slice(0,15);
+  document.querySelector('#tbl-feat tbody').innerHTML=s.map((r,i)=>`
+    <tr><td>${i+1}</td><td>${r.feature}</td><td class="num">${(+(r[key]||0)).toFixed(4)}</td></tr>`).join('');
+  new ApexCharts(document.getElementById('chart-shap'),{
+    ...CD,
+    series:[{name:'Importance',data:s.map(r=>+(r[key]||0).toFixed(4))}],
+    colors:['#1d4ed8'],
+    chart:{...CD.chart,type:'bar',height:340},
+    plotOptions:{bar:{horizontal:true,barHeight:'70%',borderRadius:3}},
+    xaxis:{...CD.xaxis,categories:s.map(r=>r.feature),title:{text:'Importance Score',style:{color:'#6b7280',fontSize:'11px'}}},
+    yaxis:{labels:{style:{colors:'#374151',fontSize:'11px'}}},
+    dataLabels:{enabled:false},
+  }).render();
+}
+
+window.addEventListener('DOMContentLoaded', initOverview);
+</script>
+</body>
+</html>
